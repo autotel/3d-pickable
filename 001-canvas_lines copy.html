@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js canvas - lines - random</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			a {
+				color:#0078ff;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="three.js-master/build/three.js"></script>
+
+		<script src="three.js-master/examples/js/renderers/Projector.js"></script>
+		<script src="three.js-master/examples/js/renderers/CanvasRenderer.js"></script>
+		<script src="three.js-master/examples/js/libs/tween.min.js"></script>
+
+		<script>
+		"strict mode"
+		//shaders/sky
+		//custom/attributes
+		//points/dynamic
+		var mouse=(function(){
+			this.x=0;
+			this.y=0;
+			var thisMouse=this;
+			function onDocumentMouseMove(event) {
+
+				thisMouse.x = event.clientX - windowHalfX;
+				thisMouse.y = event.clientY - windowHalfY;
+
+			}
+
+			function onDocumentTouchStart( event ) {
+
+				if ( event.touches.length > 1 ) {
+
+					event.preventDefault();
+
+					thisMouse.x = event.touches[ 0 ].pageX - windowHalfX;
+					thisMouse.y = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+			function onDocumentTouchMove( event ) {
+
+				if ( event.touches.length == 1 ) {
+
+					event.preventDefault();
+
+					thisMouse.x = event.touches[ 0 ].pageX - windowHalfX;
+					thisMouse.y = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+							document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+							document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+							document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+
+			return this;
+		})();
+
+		var inputs=(function(){
+			//probably we only need the socket control input?
+			this.midi=function(){};
+			//this could be an mscompose based controller
+			this.ui=function(){};
+			this.audioInput=function(){};
+			this.socket=function(){};
+			this.internal=function(){};
+		})();
+		var controls=(function(){
+
+			function tweenOrDo(callback,time){
+				if(time&&time>0){
+
+				}
+			}
+			//beware that tweens may overlap: imagine stars are fading in very slowly while blinking
+			this.starsFade=function(value,time){
+				if(time){/*tween*/}else{/*jump*/}
+				return{initialState:initialState,finalState:value,tween:tween}
+			}
+			this.linesFade=function(value,time){
+				return{initialState:initialState,finalState:value,tween:tween}
+			}
+			this.starsArrange=function(arrangement,time){
+				return{initialState:initialState,finalState:arrangement,tween:tween}
+			}
+			this.starsRotate=function(angle,time){
+				return{initialState:initialState,finalState:angle,tween:tween}
+			}
+			this.starsMove=function(relativePosition,time){
+				return{initialState:initialState,finalState:relativePosition,tween:tween}
+			}
+
+			//make a change and then go back to the previous state.
+			this.beat=function(fn,param,time){
+				//but tweening...
+				var prevParam=this[fn](param,time).initialState;
+				this[fn](prevParam,time);
+			}
+			return this;
+		})();
+
+		var windowHalfX = window.innerWidth / 2,
+		windowHalfY = window.innerHeight / 2,
+		SEPARATION = 200,
+		AMOUNTX = 10,
+		AMOUNTY = 10;
+		var world=(function(){
+			var kill=false;
+			var camera, scene, renderer;
+			var characters={
+				stars:[]
+			}
+			var behaviours=[];
+			init();
+			animate();
+			function init(opts) {
+				var defaults={
+					stars:100,
+					color:0xffffff
+				};
+				var options={};
+				if(opts){
+					for (var a in defaults){
+						options[a]=opts[a]|defaults[a];
+					}
+				}else{
+					options=defaults;
+				}
+				var container, separation = 100, amountX = 50, amountY = 50,
+				particles, particle;
+
+				container = document.createElement('div');
+				document.body.appendChild(container);
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 100;
+
+				scene = new THREE.Scene();
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				// particles
+
+				var PI2 = Math.PI * 2;
+				var material = new THREE.SpriteCanvasMaterial( {
+
+					color: 0xffffff,
+					program: function ( context ) {
+
+						context.beginPath();
+						context.arc( 0, 0, 0.5, 0, PI2, true );
+						context.fill();
+
+					}
+
+				} );
+
+				var geometry = new THREE.Geometry();
+				function dddContainer(){
+					if(!this.sprite){
+						console.error("this doesnt have sprite");
+					}else{
+						this.position=this.sprite.position;
+						this.add=function(a){this.sprite.add(a)};
+						this.behave=function(time){
+							this.position.x+=1;
+							this.sprite.updateMatrix();
+						}
+						behaviours.push(this.behave);
+					}
+				}
+
+				function Star(parent){
+					//THREE.Object3D.call(this);
+					this.sprite = new THREE.Sprite( material );
+
+					dddContainer.call(this);
+					this.sprite.position.x = Math.random() * 2 - 1;
+					this.sprite.position.y = Math.random() * 2 - 1;
+					this.sprite.position.z = Math.random() * 2 - 1;
+					this.sprite.position.normalize();
+					this.sprite.position.multiplyScalar( Math.random() * 10 + 450 );
+					this.sprite.scale.x = this.sprite.scale.y = 10;
+					parent.add( this.sprite );
+					characters.stars.push(this);
+				}
+				function StarField(parent){
+					this.sprite=new THREE.Object3D();
+					dddContainer.call(this);
+					// THREE.Object3D.call(this);
+					parent.add(this.sprite);
+				}
+				starField=new StarField(scene);
+				for ( var i = 0; i < options.stars; i ++ ) {
+					var star=new Star(starField);
+					geometry.vertices.push( star.position );
+
+				}
+
+				// lines
+
+				var line = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: options.color, opacity: 0.5 } ) );
+				scene.add( line );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			//
+
+
+			var prevTime=0;
+			function animate(time) {
+
+
+					var tv={absolute:time,delta:time-prevTime};
+					requestAnimationFrame( animate );
+					render(tv);
+					// console.log();
+					for(var a in behaviours){
+						behaviours[a](tv);
+					}
+
+				prevTime=time;
+			}
+			function render(time) {
+
+				camera.position.x += ( mouse.x - camera.position.x ) * .05;
+				camera.position.y += ( - mouse.y + 200 - camera.position.y ) * .05;
+				camera.lookAt( scene.position );
+
+				renderer.render( scene, camera );
+
+			}
+			return {
+				camera:camera,
+				renderer:renderer,
+				scene:scene,
+				characters:characters,
+				kill:function(){
+					kill:true
+				}
+			};
+		})();
+
+
+		</script>
+	</body>
+</html>
